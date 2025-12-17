@@ -33,7 +33,7 @@ resource "aws_launch_template" "web" {
       <p style="text-align: center;">
           <span style="color:#FFFFFF;">
               <span style="font-size:80px;">
-                  Welcome to &lt; TOM DENEYER &gt; ! Have a &#127790;
+                  Welcome to &lt; TOM DENEYER AAA &gt; ! Have a &#127790;
               </span>
           </span>
       </p>
@@ -60,4 +60,12 @@ resource "aws_autoscaling_group" "web" {
 
   health_check_type         = "ELB"
   health_check_grace_period = 60
+  instance_refresh {
+    strategy = "Rolling"
+
+    preferences {
+      instance_warmup        = 60
+      min_healthy_percentage = 50
+    }
+  }
 }
