@@ -109,7 +109,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          terraform init -input=false -reconfigure \
+          # Nettoyage radical des résidus locaux pour éviter toute tentative de migration
+          rm -rf .terraform .terraform.lock.hcl terraform.tfstate* terraform init -input=false -reconfigure \
             -backend-config="bucket=${TF_STATE_BUCKET}" \
             -backend-config="key=${TF_STATE_KEY}" \
             -backend-config="region=${AWS_REGION}" \
