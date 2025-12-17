@@ -33,7 +33,7 @@ resource "aws_launch_template" "web" {
       <p style="text-align: center;">
           <span style="color:#FFFFFF;">
               <span style="font-size:80px;">
-                  Welcome to &lt; Tom Deneyer &gt; ! Have a &#127790;
+                  Welcome to &lt; TOM DENEYER &gt; ! Have a &#127790;
               </span>
           </span>
       </p>
