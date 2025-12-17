@@ -39,19 +39,37 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+      
+          echo "Checking S3 bucket: $TF_STATE_BUCKET"
+      
           if aws s3api head-bucket --bucket "$TF_STATE_BUCKET" 2>/dev/null; then
-            echo "Bucket exists: $TF_STATE_BUCKET"
+            echo "Bucket exists and is accessible"
           else
+            echo "Bucket does not exist or not accessible, checking ownership..."
+      
+            if aws s3api list-buckets \
+              --query "Buckets[?Name=='$TF_STATE_BUCKET'] | length(@)" \
+              --output text | grep -q '^1$'; then
+              echo "Bucket exists but is not accessible by this account"
+              exit 1
+            fi
+      
             echo "Creating bucket: $TF_STATE_BUCKET"
+      
             if [ "$AWS_REGION" = "us-east-1" ]; then
               aws s3api create-bucket --bucket "$TF_STATE_BUCKET"
             else
-              aws s3api create-bucket --bucket "$TF_STATE_BUCKET" --region "$AWS_REGION" \
+              aws s3api create-bucket \
+                --bucket "$TF_STATE_BUCKET" \
+                --region "$AWS_REGION" \
                 --create-bucket-configuration LocationConstraint="$AWS_REGION"
             fi
+      
+            aws s3api put-bucket-versioning \
+              --bucket "$TF_STATE_BUCKET" \
+              --versioning-configuration Status=Enabled
           fi
 
-          aws s3api put-bucket-versioning --bucket "$TF_STATE_BUCKET" --versioning-configuration Status=Enabled
 
       - name: Terraform Init (S3 backend)
         run: |
