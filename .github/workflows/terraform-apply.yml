@@ -109,8 +109,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Nettoyage radical des résidus locaux pour éviter toute tentative de migration
-          rm -rf .terraform .terraform.lock.hcl terraform.tfstate* terraform init -input=false -reconfigure \
+          
+          # Suppression physique de toute trace d'une précédente config
+          # pour forcer un état "neuf" après la purge S3
+          rm -rf .terraform .terraform.lock.hcl
+          
+          terraform init -input=false -reconfigure \
             -backend-config="bucket=${TF_STATE_BUCKET}" \
             -backend-config="key=${TF_STATE_KEY}" \
             -backend-config="region=${AWS_REGION}" \
