@@ -43,7 +43,8 @@ jobs:
             -backend-config="region=${AWS_REGION}" \
             -backend-config="encrypt=true" \
             -backend-config="use_lockfile=true" \
-            -reconfigure
-
+            -migrate-state \
+            -force-copy
+            
       - name: Terraform Destroy
         run: terraform destroy -auto-approve -input=false -no-color
