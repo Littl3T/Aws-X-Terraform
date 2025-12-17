@@ -1,5 +1,6 @@
 name: terraform-destroy
 
+
 on:
   workflow_dispatch:
     inputs:
