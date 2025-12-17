@@ -78,7 +78,9 @@ jobs:
             -backend-config="key=${TF_STATE_KEY}" \
             -backend-config="region=${AWS_REGION}" \
             -backend-config="encrypt=true" \
-            -backend-config="use_lockfile=true"
+            -backend-config="use_lockfile=true" \
+            -migrate-state \
+            -force-copy
 
       - name: Terraform Validate
         run: terraform validate -no-color
