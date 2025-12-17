@@ -85,7 +85,10 @@ jobs:
             -backend-config="region=${AWS_REGION}" \
             -backend-config="encrypt=true" \
             -backend-config="use_lockfile=true" \
-            -reconfigure
+            -reconfigure \
+            -migrate-state \
+            -force-copy
+
 
       - name: Show backend + state object
         shell: bash
