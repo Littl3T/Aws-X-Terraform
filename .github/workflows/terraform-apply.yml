@@ -98,37 +98,39 @@ jobs:
       
           echo "Purging all versions for s3://${TF_STATE_BUCKET}/${TF_STATE_KEY}"
       
+          # Supprime toutes les versions du state
           aws s3api list-object-versions \
             --bucket "$TF_STATE_BUCKET" \
             --prefix "$TF_STATE_KEY" \
-            --output json > /tmp/vers.json
+            --query 'Versions[].{Key:Key,VersionId:VersionId}' \
+            --output json > /tmp/versions.json
       
-          python - <<'PY'
+          # Supprime tous les delete markers
+          aws s3api list-object-versions \
+            --bucket "$TF_STATE_BUCKET" \
+            --prefix "$TF_STATE_KEY" \
+            --query 'DeleteMarkers[].{Key:Key,VersionId:VersionId}' \
+            --output json > /tmp/markers.json
+      
+          python - <<PY
           import json
-          
-          src = json.load(open("/tmp/vers.json"))
-          
           objs = []
-          for v in src.get("Versions", []):
-              if v.get("Key") == "${TF_STATE_KEY}":
-                  objs.append({"Key": v["Key"], "VersionId": v["VersionId"]})
-          
-          for m in src.get("DeleteMarkers", []):
-              if m.get("Key") == "${TF_STATE_KEY}":
-                  objs.append({"Key": m["Key"], "VersionId": m["VersionId"]})
-          
-          out = {"Objects": objs, "Quiet": True}
-          with open("/tmp/delete.json", "w") as f:
-              json.dump(out, f)
-          
-          print(f"Found {len(objs)} versions/delete-markers to delete")
+          for path in ("/tmp/versions.json", "/tmp/markers.json"):
+              data = json.load(open(path))
+              if isinstance(data, list):
+                  objs.extend(data)
+          payload = {"Objects": objs, "Quiet": True}
+          json.dump(payload, open("/tmp/delete.json","w"))
+          print("Found", len(objs), "versions/delete-markers to delete")
           PY
       
-          if python -c "import json; print(len(json.load(open('/tmp/delete.json'))['Objects']))" | grep -vq '^0$'; then
+          count=$(python -c "import json; print(len(json.load(open('/tmp/delete.json'))['Objects']))")
+          if [ "$count" -gt 0 ]; then
             aws s3api delete-objects --bucket "$TF_STATE_BUCKET" --delete file:///tmp/delete.json
           fi
       
-          echo "Done."
+          echo "Verify:"
+          aws s3 ls "s3://${TF_STATE_BUCKET}/${TF_STATE_KEY}" || true
       
 
 
