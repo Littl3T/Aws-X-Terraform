@@ -1,10 +1,10 @@
 name: terraform-apply
 
-
 on:
   push:
     branches: [ "main" ]
-
+  workflow_dispatch:
+  
 concurrency:
   group: terraform-main
   cancel-in-progress: false
