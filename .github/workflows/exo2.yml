@@ -1,0 +1,16 @@
+name: Exercice2
+
+on:
+  pull_request:
+    paths: # All yml execpt test folder
+      - "**/*.yml"
+      - "!test/**/*.yml"
+
+  workflow_dispatch:
+  
+jobs:
+  job_ex1:
+    runs-on: ubuntu-latest
+
+    steps:
+    - run : echo "Je Teste l'exercice1"
