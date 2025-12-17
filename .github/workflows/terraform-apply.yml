@@ -104,25 +104,25 @@ jobs:
             --output json > /tmp/vers.json
       
           python - <<'PY'
-      import json
-      
-      src = json.load(open("/tmp/vers.json"))
-      
-      objs = []
-      for v in src.get("Versions", []):
-          if v.get("Key") == "${TF_STATE_KEY}":
-              objs.append({"Key": v["Key"], "VersionId": v["VersionId"]})
-      
-      for m in src.get("DeleteMarkers", []):
-          if m.get("Key") == "${TF_STATE_KEY}":
-              objs.append({"Key": m["Key"], "VersionId": m["VersionId"]})
-      
-      out = {"Objects": objs, "Quiet": True}
-      with open("/tmp/delete.json", "w") as f:
-          json.dump(out, f)
-      
-      print(f"Found {len(objs)} versions/delete-markers to delete")
-      PY
+import json
+
+src = json.load(open("/tmp/vers.json"))
+
+objs = []
+for v in src.get("Versions", []):
+    if v.get("Key") == "${TF_STATE_KEY}":
+        objs.append({"Key": v["Key"], "VersionId": v["VersionId"]})
+
+for m in src.get("DeleteMarkers", []):
+    if m.get("Key") == "${TF_STATE_KEY}":
+        objs.append({"Key": m["Key"], "VersionId": m["VersionId"]})
+
+out = {"Objects": objs, "Quiet": True}
+with open("/tmp/delete.json", "w") as f:
+    json.dump(out, f)
+
+print(f"Found {len(objs)} versions/delete-markers to delete")
+PY
       
           if python -c "import json; print(len(json.load(open('/tmp/delete.json'))['Objects']))" | grep -vq '^0$'; then
             aws s3api delete-objects --bucket "$TF_STATE_BUCKET" --delete file:///tmp/delete.json
