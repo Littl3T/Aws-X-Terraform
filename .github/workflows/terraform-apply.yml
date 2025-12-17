@@ -122,16 +122,16 @@ jobs:
             --output json > /tmp/markers.json
       
           python - <<'PY'
-import json
-objs = []
-for path in ("/tmp/versions.json", "/tmp/markers.json"):
-    data = json.load(open(path))
-    if isinstance(data, list):
-        objs.extend(data)
-payload = {"Objects": objs, "Quiet": True}
-json.dump(payload, open("/tmp/delete.json","w"))
-print("Found", len(objs), "versions/delete-markers to delete")
-PY
+          import json
+          objs = []
+          for path in ("/tmp/versions.json", "/tmp/markers.json"):
+              data = json.load(open(path))
+              if isinstance(data, list):
+                  objs.extend(data)
+          payload = {"Objects": objs, "Quiet": True}
+          json.dump(payload, open("/tmp/delete.json","w"))
+          print("Found", len(objs), "versions/delete-markers to delete")
+          PY
       
           count=$(python -c "import json; print(len(json.load(open('/tmp/delete.json'))['Objects']))")
           if [ "$count" -gt 0 ]; then
