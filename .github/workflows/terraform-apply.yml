@@ -90,8 +90,7 @@ jobs:
           terraform providers
           aws s3 ls "s3://${TF_STATE_BUCKET}/${TF_STATE_KEY}" || true
 
-      - name: PURGE state (all versions) - manual only
-        if: ${{ github.event_name == 'workflow_dispatch' }}
+      - name: PURGE state (all versions)
         shell: bash
         run: |
           set -euo pipefail
