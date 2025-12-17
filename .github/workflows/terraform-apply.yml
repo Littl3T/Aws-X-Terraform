@@ -110,16 +110,18 @@ jobs:
         run: |
           set -euo pipefail
           
-          # Suppression physique de toute trace d'une précédente config
-          # pour forcer un état "neuf" après la purge S3
-          rm -rf .terraform .terraform.lock.hcl
+          # 1. On supprime TOUT ce qui ressemble à un état local
+          # (Le state doit venir du backend S3, pas du runner)
+          rm -rf .terraform terraform.tfstate terraform.tfstate.backup
           
-          terraform init -reconfigure \
+          # 2. On initialise proprement le backend S3
+          terraform init -input=false -reconfigure \
             -backend-config="bucket=${TF_STATE_BUCKET}" \
             -backend-config="key=${TF_STATE_KEY}" \
             -backend-config="region=${AWS_REGION}" \
             -backend-config="encrypt=true" \
             -backend-config="use_lockfile=true"
+
 
       - name: Terraform Validate
         run: terraform validate -no-color
