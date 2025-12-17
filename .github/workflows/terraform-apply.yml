@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       reset:
-        description: "Type RESET to destroy + purge state before apply"
+        description: "Type RESET to purge remote state before apply"
         required: false
         default: ""
 
@@ -44,23 +44,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-      
+
           echo "Checking S3 bucket: $TF_STATE_BUCKET"
-      
+
           if aws s3api head-bucket --bucket "$TF_STATE_BUCKET" 2>/dev/null; then
             echo "Bucket exists and is accessible"
           else
-            echo "Bucket does not exist or not accessible, checking ownership..."
-      
-            if aws s3api list-buckets \
-              --query "Buckets[?Name=='$TF_STATE_BUCKET'] | length(@)" \
-              --output text | grep -q '^1$'; then
-              echo "Bucket exists but is not accessible by this account"
-              exit 1
-            fi
-      
             echo "Creating bucket: $TF_STATE_BUCKET"
-      
+
             if [ "$AWS_REGION" = "us-east-1" ]; then
               aws s3api create-bucket --bucket "$TF_STATE_BUCKET"
             else
@@ -69,7 +60,7 @@ jobs:
                 --region "$AWS_REGION" \
                 --create-bucket-configuration LocationConstraint="$AWS_REGION"
             fi
-      
+
             aws s3api put-bucket-versioning \
               --bucket "$TF_STATE_BUCKET" \
               --versioning-configuration Status=Enabled
@@ -84,45 +75,28 @@ jobs:
             -backend-config="key=${TF_STATE_KEY}" \
             -backend-config="region=${AWS_REGION}" \
             -backend-config="encrypt=true" \
-            -backend-config="use_lockfile=true" \
-            -migrate-state \
-            -force-copy
-
-
-      - name: Show backend + state object
-        shell: bash
-        run: |
-          set -euo pipefail
-          terraform providers
-          aws s3 ls "s3://${TF_STATE_BUCKET}/${TF_STATE_KEY}" || true
-
-      - name: Terraform Destroy (RESET only)
-        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.reset == 'RESET' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          terraform destroy -auto-approve -input=false -no-color
+            -backend-config="use_lockfile=true"
 
       - name: PURGE state (all versions) (RESET only)
         if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.reset == 'RESET' }}
         shell: bash
         run: |
           set -euo pipefail
-      
+
           echo "Purging all versions for s3://${TF_STATE_BUCKET}/${TF_STATE_KEY}"
-      
+
           aws s3api list-object-versions \
             --bucket "$TF_STATE_BUCKET" \
             --prefix "$TF_STATE_KEY" \
             --query 'Versions[].{Key:Key,VersionId:VersionId}' \
             --output json > /tmp/versions.json
-      
+
           aws s3api list-object-versions \
             --bucket "$TF_STATE_BUCKET" \
             --prefix "$TF_STATE_KEY" \
             --query 'DeleteMarkers[].{Key:Key,VersionId:VersionId}' \
             --output json > /tmp/markers.json
-      
+
           python - <<'PY'
           import json
           objs = []
@@ -130,16 +104,15 @@ jobs:
               data = json.load(open(path))
               if isinstance(data, list):
                   objs.extend(data)
-          payload = {"Objects": objs, "Quiet": True}
-          json.dump(payload, open("/tmp/delete.json","w"))
+          json.dump({"Objects": objs, "Quiet": True}, open("/tmp/delete.json", "w"))
           print("Found", len(objs), "versions/delete-markers to delete")
           PY
-      
+
           count=$(python -c "import json; print(len(json.load(open('/tmp/delete.json'))['Objects']))")
           if [ "$count" -gt 0 ]; then
             aws s3api delete-objects --bucket "$TF_STATE_BUCKET" --delete file:///tmp/delete.json
           fi
-      
+
           echo "Verify:"
           aws s3 ls "s3://${TF_STATE_BUCKET}/${TF_STATE_KEY}" || true
 
